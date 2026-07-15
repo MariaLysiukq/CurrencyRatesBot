@@ -6,7 +6,7 @@ repos:
         entry: isort
         language: system
         types: [python]
-        args: ["--settings-path=setup.cfg"]
+        args: ["--settings-path=setup.cfg", "..."]
 
       - id: flake8
         name: Check Python code
