@@ -1,2 +1,2 @@
 # CurrencyRatesBot
-A bot designed to track and convert real-time global currency exchange rates and send automated market alerts.
+An asynchronous Python service designed to track global currency exchange rates and broadcast real-time automated market alerts.
