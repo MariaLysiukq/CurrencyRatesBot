@@ -1,0 +1,37 @@
+FROM python:3.12-slim-bookworm AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.12-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
+    PATH="/opt/venv/bin:$PATH" \
+    TZ=Europe/Kyiv
+
+RUN groupadd -r botuser && useradd -r -g botuser botuser
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
+COPY --chown=botuser:botuser src/ ./src/
+COPY --chown=botuser:botuser data/ ./data/
+
+USER botuser
+
+CMD ["python", "-m", "currency_rates_bot.main"]
