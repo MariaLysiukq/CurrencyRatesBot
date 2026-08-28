@@ -45,6 +45,7 @@ Currency-rates-bot/
 ├── docker-compose.yml     # Container orchestration
 ├── requirements.txt       # Python dependencies
 └── .pre-commit-config.yaml# Code quality hooks
+```
 
 Development Guidelines
 
@@ -55,4 +56,3 @@ This project uses pre-commit to maintain clean and consistent code. Before makin
     Install the git hooks: pre-commit install
 
     Run checks manually on all files: pre-commit run --all-files
-```
