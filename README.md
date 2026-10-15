@@ -1,58 +1,72 @@
-# CurrencyRatesBot
-An asynchronous Python service designed to track global currency exchange rates and broadcast real-time automated market alerts.
+# Currency Rates Bot
 
-## Data Source & API
-This bot fetches real-time and historical exchange rates using the [Frankfurter API](https://api.frankfurter.app/).
+An asynchronous Telegram bot for looking up and converting currency exchange rates. The project uses the Frankfurter API as its exchange-rate data source.
 
-# Quick Start (Recommended)
-1. Clone the repository
-Download the project to your local machine and navigate into the folder:
+## Requirements
+
+- Python 3.10+
+- Docker and Docker Compose
+- A Telegram bot token from [@BotFather](https://t.me/BotFather)
+
+## Run with Docker Compose
 
 ```bash
-git clone git@github.com:MariaLysiukq/CurrencyRatesBot.git
-cd Currency-rates-bot
-```
-
-2. Set up configuration
-Create your environment variables file from the provided example:
-```bash
+git clone https://github.com/MariaLysiukq/CurrencyRatesBot.git
+cd CurrencyRatesBot
 cp .env.example .env
 ```
-Note: Open the .env file and replace the placeholder with your actual BOT_TOKEN obtained from @BotFather.
 
-3. Build and run the bot
-Start the container in detached mode (background):
+Edit `.env` and set your Telegram bot token:
+
+```env
+BOT_TOKEN=replace-with-your-telegram-bot-token
+```
+
+Keep `.env` private; do not commit real credentials.
+
+Build and start the bot:
 
 ```bash
 docker compose up --build -d
 ```
-    --build: Ensures Docker packages your latest code and dependencies.
 
-    -d: Runs the bot silently in the background, freeing up your terminal.
+View its logs:
 
-# Project Structure
-
-```text
-Currency-rates-bot/
-├── src/
-│   └── currency_rates_bot/
-│       ├── main.py        # Entry point for the application
-│       ├── handlers.py    # Telegram command handlers
-│       ├── keyboards.py   # Reply and Inline keyboards
-│       └── storage.py     # Data management logic
-├── data/                  # Persistent data storage (rates.json)
-├── Dockerfile             # Multi-stage build instructions
-├── docker-compose.yml     # Container orchestration
-├── requirements.txt       # Python dependencies
-└── .pre-commit-config.yaml# Code quality hooks
+```bash
+docker compose logs -f bot
 ```
 
-Development Guidelines
+Stop it:
 
-This project uses pre-commit to maintain clean and consistent code. Before making your first commit, please initialize the hooks:
+```bash
+docker compose down
+```
 
-    Ensure the package is installed: pip install pre-commit
+## Exchange-rate source
 
-    Install the git hooks: pre-commit install
+The bot uses the [Frankfurter API](https://api.frankfurter.app/). No Frankfurter API key is listed as required by the current project configuration.
 
-    Run checks manually on all files: pre-commit run --all-files
+## Project structure
+
+```text
+.
+├── src/currency_rates_bot/
+│   ├── main.py
+│   ├── handlers.py
+│   ├── keyboards.py
+│   └── storage.py
+├── data/
+├── .env.example
+├── Dockerfile
+└── docker-compose.yml
+```
+
+## Development checks
+
+Install and run the configured pre-commit hooks:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
