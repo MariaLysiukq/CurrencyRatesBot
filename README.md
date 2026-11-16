@@ -1,5 +1,7 @@
 # Currency Rates Bot
 
+[![Tests](https://github.com/MariaLysiukq/CurrencyRatesBot/actions/workflows/tests.yml/badge.svg)](https://github.com/MariaLysiukq/CurrencyRatesBot/actions/workflows/tests.yml)
+
 An asynchronous Telegram bot for looking up and converting currency exchange rates. The project uses the Frankfurter API as its exchange-rate data source.
 
 ## Requirements
@@ -56,10 +58,20 @@ The bot uses the [Frankfurter API](https://api.frankfurter.app/). No Frankfurter
 │   ├── keyboards.py
 │   └── storage.py
 ├── data/
+├── tests/
 ├── .env.example
 ├── Dockerfile
 └── docker-compose.yml
 ```
+
+## Running tests
+
+```bash
+pip install -r requirements.txt pytest
+pytest
+```
+
+The tests use fake Telegram and HTTP objects, so no bot token or network access is needed.
 
 ## Development checks
 
@@ -70,3 +82,7 @@ pip install pre-commit
 pre-commit install
 pre-commit run --all-files
 ```
+
+## License
+
+[MIT](LICENSE)

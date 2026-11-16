@@ -181,6 +181,7 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data[_PENDING_ACTION_KEY] = "convert_amount"
         await update.message.reply_text("Enter the amount:", reply_markup=ReplyKeyboardRemove())
         return
+    handled = False
     if pending_action:
         handled = await _process_pending_action(update, context, pending_action, text)
     if handled:
