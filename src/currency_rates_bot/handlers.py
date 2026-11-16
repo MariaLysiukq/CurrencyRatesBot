@@ -2,7 +2,7 @@ from telegram import ReplyKeyboardRemove, Update
 from telegram.ext import ContextTypes
 
 from .keyboards import MENU_CONVERT, MENU_HELP, MENU_HISTORY, MENU_RATES, currency_keyboard, main_menu_keyboard
-from .storage import RateStorage, fetch_frankfurter_rates
+from .storage import RateProvider, RateStorage, convert
 
 _HELP_TEXT = (
     "Available commands:\n\n"
@@ -13,6 +13,9 @@ _HELP_TEXT = (
 
 _PENDING_ACTION_KEY = "pending_menu_action"
 storage = RateStorage()
+rate_provider = RateProvider(storage)
+
+SUPPORTED_CURRENCIES = ("USD", "EUR", "PLN", "GBP", "UAH")
 
 
 def _clear_pending_action(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -54,15 +57,21 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def cmd_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     _clear_pending_action(context)
     base_currency = context.user_data.get("base_currency", "EUR")
-    rates = await fetch_frankfurter_rates(base=base_currency)
+    rates = await rate_provider.get_rates()
     if not rates:
         await _reply_with_menu(update, "Currency rates not available at the moment.")
         return
+    if base_currency not in rates:
+        await _reply_with_menu(update, f"Rates are not available for {base_currency}. Choose another base currency.")
+        return
     rates_lines = []
-    for currency, rate in rates.items():
-        if currency != base_currency:
-            rates_lines.append(f"{currency}: {rate}")
-    await _reply_with_menu(update, f"Current rates (Base: {base_currency}):\n\n" + "\n".join(rates_lines))
+    for currency in SUPPORTED_CURRENCIES:
+        if currency != base_currency and currency in rates:
+            rates_lines.append(f"{currency}: {convert(1, base_currency, currency, rates):.4f}")
+    await _reply_with_menu(
+        update,
+        f"Current rates (Base: {base_currency}, 1 {base_currency} =):\n\n" + "\n".join(rates_lines),
+    )
 
 
 async def cmd_convert(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -78,11 +87,11 @@ async def cmd_convert(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await _reply_with_menu(update, "Amount should be a number!")
         return
 
-    rates = storage.load_rates()
+    rates = await rate_provider.get_rates()
     if from_curr not in rates or to_curr not in rates:
         await _reply_with_menu(update, "Rates not available for the given currencies.")
         return
-    result = (amount * rates[from_curr]) / rates[to_curr]
+    result = convert(amount, from_curr, to_curr, rates)
     result_text = f"{amount} {from_curr} = {result:.2f} {to_curr}"
 
     if "history" not in context.user_data:
@@ -102,12 +111,12 @@ async def _handle_convert_amount(update: Update, context: ContextTypes.DEFAULT_T
     from_curr = context.user_data.get("convert_from_curr")
     to_curr = context.user_data.get("convert_to_curr")
 
-    rates = storage.load_rates()
+    rates = await rate_provider.get_rates()
     if from_curr not in rates or to_curr not in rates:
         await _reply_with_menu(update, "Rates not available for the given currencies.")
         _clear_pending_action(context)
         return
-    result = (amount * rates[from_curr]) / rates[to_curr]
+    result = convert(amount, from_curr, to_curr, rates)
     result_text = f"{amount} {from_curr} = {result:.2f} {to_curr}"
     history = context.user_data.setdefault("history", [])
     history.append(result_text)

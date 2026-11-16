@@ -1,11 +1,18 @@
 import json
 import logging
+import time
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import aiohttp
 
 logger = logging.getLogger(__name__)
+
+# Exchange rates expressed as "UAH per one unit of currency" (UAH itself is 1.0).
 Rates = dict[str, float]
+
+NBU_RATES_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json"
+REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 class RateStorage:
@@ -30,20 +37,66 @@ class RateStorage:
         logger.info("Rates saved successfully to %s", self.file_path.name)
 
 
-async def fetch_frankfurter_rates(base: str = "USD") -> Rates:
-    """Fetches latest currency extange rates from frankfurter API"""
-    url = f"https://api.frankfurter.app/latest?from={base}"
+async def fetch_nbu_rates() -> Rates:
+    """Fetches the official National Bank of Ukraine rates (UAH per unit)."""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    rates = data.get("rates", {})
-                    rates[base] = 1.0
-                    return rates
-                else:
-                    logger.error("Frankfurter API returned status %s", response.status)
+        async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
+            async with session.get(NBU_RATES_URL) as response:
+                if response.status != 200:
+                    logger.error("NBU API returned status %s", response.status)
                     return {}
+                data = await response.json()
     except Exception as error:
         logger.error("Error fetching rates: %s", error)
-    return {}
+        return {}
+
+    rates: Rates = {"UAH": 1.0}
+    for item in data:
+        code, rate = item.get("cc"), item.get("rate")
+        if code and rate:
+            rates[code] = float(rate)
+    return rates
+
+
+class RateProvider:
+    """Returns live rates, cached for `ttl_seconds`.
+
+    If the API is unavailable, the last successfully fetched rates are used,
+    and if there are none yet, the bundled `data/rates.json` file.
+    """
+
+    def __init__(
+        self,
+        storage: RateStorage,
+        fetcher: Callable[[], Awaitable[Rates]] = fetch_nbu_rates,
+        ttl_seconds: float = 3600,
+        clock: Callable[[], float] = time.monotonic,
+    ):
+        self.storage = storage
+        self.fetcher = fetcher
+        self.ttl_seconds = ttl_seconds
+        self.clock = clock
+        self._rates: Rates = {}
+        self._fetched_at: float | None = None
+
+    async def get_rates(self) -> Rates:
+        if self._fetched_at is not None and self.clock() - self._fetched_at < self.ttl_seconds:
+            return self._rates
+
+        rates = await self.fetcher()
+        if rates:
+            self._rates = rates
+            self._fetched_at = self.clock()
+            return rates
+
+        if self._rates:
+            logger.warning("Using previously fetched rates")
+            return self._rates
+
+        logger.warning("Using fallback rates from %s", self.storage.file_path.name)
+        return self.storage.load_rates()
+
+
+def convert(amount: float, from_curr: str, to_curr: str, rates: Rates) -> float:
+    """Converts `amount` using rates expressed in UAH per unit."""
+    return amount * rates[from_curr] / rates[to_curr]

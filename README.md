@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/MariaLysiukq/CurrencyRatesBot/actions/workflows/tests.yml/badge.svg)](https://github.com/MariaLysiukq/CurrencyRatesBot/actions/workflows/tests.yml)
 
-An asynchronous Telegram bot for looking up and converting currency exchange rates. The project uses the Frankfurter API as its exchange-rate data source.
+An asynchronous Telegram bot for looking up and converting currency exchange rates. It uses the official National Bank of Ukraine (NBU) exchange rates, so UAH and 40+ other currencies are supported.
 
 ## Requirements
 
@@ -46,7 +46,13 @@ docker compose down
 
 ## Exchange-rate source
 
-The bot uses the [Frankfurter API](https://api.frankfurter.app/). No Frankfurter API key is listed as required by the current project configuration.
+The bot uses the official [National Bank of Ukraine API](https://bank.gov.ua/ua/open-data/api-dev) (no API key needed). Rates are expressed in UAH per unit, so any pair can be converted, for example USD → PLN.
+
+- Live rates are cached in memory for 1 hour to avoid unnecessary requests.
+- If the API is unavailable, the bot keeps using the last fetched rates.
+- If no rates have been fetched yet, it falls back to `data/rates.json`.
+
+`/rates` shows the value of 1 unit of your base currency in USD, EUR, PLN, GBP and UAH.
 
 ## Project structure
 
